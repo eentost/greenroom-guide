@@ -26,7 +26,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p site
+          echo 'Encoded archive chunk checksums:'
+          sha256sum .deploy/greenroom.part*
           cat .deploy/greenroom.part* | base64 --decode > /tmp/greenroom-guide.tar.gz
+          echo 'Decoded archive checksum:'
+          sha256sum /tmp/greenroom-guide.tar.gz
+          gzip -t /tmp/greenroom-guide.tar.gz
           tar -tzf /tmp/greenroom-guide.tar.gz >/dev/null
           tar -xzf /tmp/greenroom-guide.tar.gz -C site --strip-components=1
           test -s site/index.html
