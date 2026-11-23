@@ -20,35 +20,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Assemble site archive
+      - name: Assemble site
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p site
-          echo 'Encoded archive chunk checksums:'
-          sha256sum .deploy/greenroom.part*
-          cat .deploy/greenroom.part* | base64 --decode > /tmp/greenroom-guide.tar.gz
-          echo 'Decoded archive checksum:'
-          sha256sum /tmp/greenroom-guide.tar.gz
-          gzip -t /tmp/greenroom-guide.tar.gz
-          tar -tzf /tmp/greenroom-guide.tar.gz >/dev/null
-          tar -xzf /tmp/greenroom-guide.tar.gz -C site --strip-components=1
+          gzip -t .deploy/site.tar.gz
+          tar -tzf .deploy/site.tar.gz >/dev/null
+          tar -xzf .deploy/site.tar.gz -C site --strip-components=1
           test -s site/index.html
           test -s site/ads.txt
           test -s site/sitemap.xml
           test -s site/robots.txt
-          echo "Pages to publish:"
+          test -d site/guides
+          echo "Published files:"
           find site -type f | sort
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
-
   deploy:
     environment:
       name: github-pages
