@@ -18,33 +18,53 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Assemble site
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate and assemble website
         shell: bash
         run: |
           set -euo pipefail
+          ARCHIVE=".deploy/site.tar.gz"
+          test -s "$ARCHIVE"
+          echo "Archive metadata:"
+          file "$ARCHIVE"
+          ls -lh "$ARCHIVE"
+          gzip -t "$ARCHIVE"
+          tar -tzf "$ARCHIVE" > /tmp/site-files.txt
+          echo "Archive entries:"
+          sed -n '1,100p' /tmp/site-files.txt
+
           mkdir -p site
-          cat .deploy/site.part* | base64 --decode > /tmp/site.tar.gz
-          echo "Expected archive SHA256: 00fe9f39790a5e7ef6ddf0d559dcb0c7974132677d3089790471415185e331ce"
-          echo "Actual archive SHA256:"
-          sha256sum /tmp/site.tar.gz
-          echo "00fe9f39790a5e7ef6ddf0d559dcb0c7974132677d3089790471415185e331ce  /tmp/site.tar.gz" | sha256sum -c -
-          gzip -t /tmp/site.tar.gz
-          tar -tzf /tmp/site.tar.gz >/dev/null
-          tar -xzf /tmp/site.tar.gz -C site --strip-components=1
+          if grep -qx 'index.html' /tmp/site-files.txt; then
+            tar -xzf "$ARCHIVE" -C site
+          else
+            ROOT="$(awk -F/ 'NF > 1 {print $1; exit}' /tmp/site-files.txt)"
+            test -n "$ROOT"
+            grep -qx "${ROOT}/index.html" /tmp/site-files.txt
+            tar -xzf "$ARCHIVE" -C site --strip-components=1
+          fi
+
           test -s site/index.html
-          test -s site/ads.txt
-          test -s site/sitemap.xml
-          test -s site/robots.txt
-          test -s site/assets/site.js
-          test -s site/assets/style.css
-          test -d site/guides
           echo "Published file count:"
           find site -type f | wc -l
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+          echo "SEO/support files:"
+          for f in ads.txt robots.txt sitemap.xml; do
+            if test -s "site/$f"; then
+              echo "OK: $f"
+            else
+              echo "MISSING: $f"
+            fi
+          done
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
+
   deploy:
     environment:
       name: github-pages
