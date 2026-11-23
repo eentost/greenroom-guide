@@ -46,21 +46,45 @@ jobs:
           fi
 
           test -s site/index.html
+          # Generate crawler files from the actual published HTML pages.
+          cat > site/robots.txt <<'ROBOTS'
+User-agent: *
+Allow: /
+
+Sitemap: https://eentost.github.io/greenroom-guide/sitemap.xml
+ROBOTS
+
+          {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            while IFS= read -r page; do
+              rel="${page#site/}"
+              case "$rel" in
+                404.html) continue ;;
+              esac
+              if [ "$rel" = "index.html" ]; then
+                loc="https://eentost.github.io/greenroom-guide/"
+              else
+                loc="https://eentost.github.io/greenroom-guide/$rel"
+              fi
+              printf '  <url><loc>%s</loc></url>\n' "$loc"
+            done < <(find site -type f -name '*.html' | sort)
+            echo '</urlset>'
+          } > site/sitemap.xml
+
           echo "Published file count:"
-          find site -type f | wc -l
-          echo "SEO/support files:"
-          for f in ads.txt robots.txt sitemap.xml; do
-            if test -s "site/$f"; then
-              echo "OK: $f"
-            else
-              echo "MISSING: $f"
-            fi
-          done
+          find site -type f | sort
+          test -s site/robots.txt
+          test -s site/sitemap.xml
+          echo "robots.txt and sitemap.xml generated successfully."
+          if test -s site/ads.txt; then
+            echo "ads.txt: present"
+          else
+            echo "ads.txt: not configured (publisher ID is required; not fabricated)"
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
