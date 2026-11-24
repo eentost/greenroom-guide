@@ -48,11 +48,11 @@ jobs:
           test -s site/index.html
           # Generate crawler files from the actual published HTML pages.
           cat > site/robots.txt <<'ROBOTS'
-User-agent: *
-Allow: /
+          User-agent: *
+          Allow: /
 
-Sitemap: https://eentost.github.io/greenroom-guide/sitemap.xml
-ROBOTS
+          Sitemap: https://eentost.github.io/greenroom-guide/sitemap.xml
+          ROBOTS
 
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
