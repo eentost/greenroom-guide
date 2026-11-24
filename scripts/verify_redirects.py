@@ -45,7 +45,8 @@ def verify(site):
     old_pages = old_html_paths()
     assert len(old_pages) == 20, f'unexpected baseline page count: {len(old_pages)}'
     actual = {path.relative_to(site).as_posix() for path in site.rglob('*') if path.is_file()}
-    assert actual == old_pages | {'robots.txt'}, f'unexpected artifact paths: {sorted(actual ^ (old_pages | {"robots.txt"}))}'
+    expected = old_pages | {'robots.txt', '404.html'}
+    assert actual == expected, f'unexpected artifact paths: {sorted(actual ^ expected)}'
     for relative in sorted(old_pages):
         target = ROOT if relative == 'index.html' else ROOT + relative
         raw = (site / relative).read_text()
@@ -59,7 +60,12 @@ def verify(site):
         assert 'pagead' not in raw and '/greenroom-guide/' not in raw, f'{relative}: obsolete URLs or ads'
     robots = (site / 'robots.txt').read_text()
     assert robots == 'User-agent: *\nAllow: /\n', 'obsolete sitemap or crawler restriction'
-    print(f'Verified {len(old_pages)} one-to-one redirect files (21 URLs with the home alias); no other pages, scripts, ads, or sitemap.')
+    not_found = Page()
+    not_found.feed((site / '404.html').read_text())
+    assert not_found.links == [ROOT, ROOT + 'sitemap.xml'], 'invalid 404 fallback links'
+    assert not not_found.refresh and not not_found.canonical and not not_found.scripts, '404 must not redirect or run scripts'
+    assert not_found.robots == ['noindex,follow'], '404 should not be indexed'
+    print(f'Verified {len(old_pages)} one-to-one redirect files (21 URLs with the home alias), custom 404, and no legacy sitemap or ad code.')
 
 
 if __name__ == '__main__':

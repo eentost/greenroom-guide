@@ -51,6 +51,23 @@ def build(site):
 </body>
 </html>
 """, encoding='utf-8')
+    (site / '404.html').write_text(f"""<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,follow">
+  <title>페이지를 찾을 수 없습니다 | 초록한칸</title>
+</head>
+<body>
+  <main>
+    <h1>요청하신 페이지를 찾을 수 없습니다</h1>
+    <p>현재 가이드는 새 주소에서 이용하실 수 있습니다.</p>
+    <p><a href="{ROOT}">초록한칸 홈</a> · <a href="{ROOT}sitemap.xml">새 사이트맵</a></p>
+  </main>
+</body>
+</html>
+""", encoding='utf-8')
     (site / 'robots.txt').write_text('User-agent: *\nAllow: /\n', encoding='utf-8')
 
 
