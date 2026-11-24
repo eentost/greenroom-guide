@@ -1,4 +1,4 @@
-name: Deploy Greenroom Guide to GitHub Pages
+name: Deploy Greenroom legacy redirects to GitHub Pages
 
 on:
   push:
@@ -21,67 +21,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate and assemble website
-        shell: bash
+      - name: Build and validate redirects
         run: |
-          set -euo pipefail
-          ARCHIVE=".deploy/site.tar.gz"
-          test -s "$ARCHIVE"
-          echo "Archive metadata:"
-          file "$ARCHIVE"
-          ls -lh "$ARCHIVE"
-          gzip -t "$ARCHIVE"
-          tar -tzf "$ARCHIVE" > /tmp/site-files.txt
-          echo "Archive entries:"
-          sed -n '1,100p' /tmp/site-files.txt
-
-          mkdir -p site
-          if grep -qx 'index.html' /tmp/site-files.txt; then
-            tar -xzf "$ARCHIVE" -C site
-          else
-            ROOT="$(awk -F/ 'NF > 1 {print $1; exit}' /tmp/site-files.txt)"
-            test -n "$ROOT"
-            grep -qx "${ROOT}/index.html" /tmp/site-files.txt
-            tar -xzf "$ARCHIVE" -C site --strip-components=1
-          fi
-
-          test -s site/index.html
-          # Generate crawler files from the actual published HTML pages.
-          cat > site/robots.txt <<'ROBOTS'
-          User-agent: *
-          Allow: /
-
-          Sitemap: https://eentost.github.io/greenroom-guide/sitemap.xml
-          ROBOTS
-
-          {
-            echo '<?xml version="1.0" encoding="UTF-8"?>'
-            echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            while IFS= read -r page; do
-              rel="${page#site/}"
-              case "$rel" in
-                404.html) continue ;;
-              esac
-              if [ "$rel" = "index.html" ]; then
-                loc="https://eentost.github.io/greenroom-guide/"
-              else
-                loc="https://eentost.github.io/greenroom-guide/$rel"
-              fi
-              printf '  <url><loc>%s</loc></url>\n' "$loc"
-            done < <(find site -type f -name '*.html' | sort)
-            echo '</urlset>'
-          } > site/sitemap.xml
-
-          echo "Published file count:"
-          find site -type f | sort
-          test -s site/robots.txt
-          test -s site/sitemap.xml
-          echo "robots.txt and sitemap.xml generated successfully."
-          if test -s site/ads.txt; then
-            echo "ads.txt: present"
-          else
-            echo "ads.txt: not configured (publisher ID is required; not fabricated)"
-          fi
+          python3 scripts/build_redirects.py site
+          python3 scripts/verify_redirects.py site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
